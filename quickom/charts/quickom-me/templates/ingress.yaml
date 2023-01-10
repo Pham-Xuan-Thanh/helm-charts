@@ -1,0 +1,41 @@
+{{- if .Values.ingress.enabled -}}
+{{- $root := . -}}
+{{- $serviceName :=  . -}}
+{{- $servicePort := .Values.service.externalPort -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "quickom-me.fullname" . }}
+  labels:
+    app: 
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+    {{- include "quickom-me.labels" . | nindent 4 }}
+  {{ with .Values.ingress.annotations }}
+  annotations: 
+      {{- toYaml . | nindent 4 -}}
+  {{- end }}
+spec:
+  rules:
+    {{- range $host , $val := .Values.ingress.hosts }}
+  - host: {{ $host }}
+    http:
+      paths:
+        {{- range $path, $pathVal := $val.paths }}
+      - pathType: {{ $pathVal.type }}
+        path: {{ $pathVal.path }}
+        backend:
+          service: 
+            name: {{ default (include "quickom-me.fullname" $root ) $pathVal.backendService }}
+            port: 
+              number: {{ default 80 $pathVal.targetPort }}
+        {{ end -}}
+
+  {{- end -}}
+  {{- if .Values.ingress.tls }}
+  tls:
+{{ toYaml .Values.ingress.tls | indent 4 }}
+  {{- end -}}
+{{- end -}}
+
