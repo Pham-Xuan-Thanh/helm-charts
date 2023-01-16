@@ -1,0 +1,227 @@
+{{ if .Values.mysql.enabled }}
+{{ $mysql := .Values.mysql }}
+apiVersion: apps/v1
+kind: {{ ternary "StatefulSet" "Deployment" .Values.mysql.useStatefulSet | quote }}
+metadata:
+  name: {{ print ( include "tutorica.fullname" .) "-mysql" }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tutorica.labels" . | nindent 4 }}
+    app.kubernetes.io/component: primary
+    {{ with .Values.mysql.podLabels -}}
+      {{ toYaml . | nindent 6 }}
+    {{- end }}
+  {{- with .Values.mysql.annotations }}
+  annotations:
+    {{- toYaml .  | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{ include "tutorica.labels" . | nindent 6 }}
+      app.kubernetes.io/component: primary
+  serviceName: {{ print (include "tutorica.fullname" .) "-mysql" }}
+  template:
+    metadata:
+      annotations:
+
+        {{- with $mysql.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{ include "tutorica.labels" . | nindent 8 }}
+        app.kubernetes.io/component: primary
+        {{  toYaml .Values.mysql.podLabels | nindent 8 }}
+    spec:
+      {{- with .Values.mysql.imagePullSecrets }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.mysql.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.mysql.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.mysql.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.mysql.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.mysql.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      {{- if or .Values.mysql.initContainers (and .Values.mysql.podSecurityContext.enabled .Values.volumePermissions.enabled .Values.mysql.persistence.enabled) }}
+      initContainers:
+        {{- if .Values.mysql.initContainers }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.mysql.initContainers "context" $) | nindent 8 }}
+        {{- end }}
+        {{- if and .Values.mysql.podSecurityContext.enabled .Values.volumePermissions.enabled .Values.mysql.persistence.enabled }}
+        - name: volume-permissions
+          image: {{ include "mysql.volumePermissions.image" . }}
+          imagePullPolicy: {{ .Values.volumePermissions.image.pullPolicy | quote }}
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              chown -R {{ .Values.mysql.containerSecurityContext.runAsUser }}:{{ .Values.mysql.podSecurityContext.fsGroup }} /bitnami/mysql
+          securityContext:
+            runAsUser: 0
+          {{- if .Values.volumePermissions.resources }}
+          resources: {{- toYaml .Values.volumePermissions.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/mysql
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: mysql
+          image: {{ print .Values.mysql.image.repository ":" .Values.mysql.image.tag | quote }}
+          imagePullPolicy: {{ .Values.mysql.image.pullPolicy | quote }}
+          {{- if .Values.mysql.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.mysql.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          {{- with .Values.mysql.command }}
+          command: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.mysql.args }}
+          args:
+          {{ toYaml .    | nindent 12 }}
+          {{- end }}
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mysql.auth.existingSecret | quote }}
+                  key: mysql-root-password
+
+            {{- if not (empty .Values.mysql.auth.username) }}
+            - name: MYSQL_USER
+              value: {{ .Values.mysql.auth.username | quote }}
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mysql.auth.existingSecret | quote }}
+                  key: mysql-password
+            {{- end }}
+            - name: MYSQL_DATABASE
+              value: {{ .Values.mysql.auth.database | quote }}
+            
+            {{- with .Values.mysql.extraEnvVars }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if or .Values.mysql.extraEnvVarsCM .Values.mysql.extraEnvVarsSecret }}
+          envFrom:
+            {{- if .Values.mysql.extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ .Values.mysql.extraEnvVarsCM }}
+            {{- end }}
+            {{- if .Values.mysql.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ .Values.mysql.extraEnvVarsSecret }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: mysql
+              containerPort: 3306
+          {{- if .Values.mysql.livenessProbe.enabled }}
+          livenessProbe: {{- omit .Values.mysql.livenessProbe "enabled" | toYaml | nindent 12 }}
+            exec:
+              command:
+                - /bin/bash
+                - -ec
+                - |
+                  password_aux="${MYSQL_ROOT_PASSWORD:-}"
+                  if [[ -f "${MYSQL_ROOT_PASSWORD_FILE:-}" ]]; then
+                      password_aux=$(cat "$MYSQL_ROOT_PASSWORD_FILE")
+                  fi
+                  mysqladmin status -uroot -p"${password_aux}"
+          {{- else if .Values.mysql.customLivenessProbe }}
+          livenessProbe: 
+          {{- toYaml .Values.mysql.customLivenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.mysql.readinessProbe.enabled }}
+          readinessProbe: {{- omit .Values.mysql.readinessProbe "enabled" | toYaml | nindent 12 }}
+            exec:
+              command:
+                - /bin/bash
+                - -ec
+                - |
+                  password_aux="${MYSQL_ROOT_PASSWORD:-}"
+                  if [[ -f "${MYSQL_ROOT_PASSWORD_FILE:-}" ]]; then
+                      password_aux=$(cat "$MYSQL_ROOT_PASSWORD_FILE")
+                  fi
+                  mysqladmin status -uroot -p"${password_aux}"
+          {{- else if .Values.mysql.customReadinessProbe }}
+          readinessProbe: 
+            {{- toYaml .Values.mysql.customReadinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.mysql.resources }}
+          resources: {{ toYaml .Values.mysql.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql 
+            
+            {{- if  .Values.mysql.initdbScriptsConfigMap  }}
+            - name: custom-init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+            {{- end }}
+            {{- if  .Values.mysql.existingConfigmap }}
+            - name: config
+              mountPath: /opt/bitnami/mysql/conf/my.cnf
+              subPath: my.cnf
+            {{- end }}
+            {{- with .Values.mysql.extraVolumeMounts }}
+            {{- toYaml .  | nindent 12 }}
+            {{- end }}
+      volumes:
+        {{- if  .Values.mysql.existingConfigmap }}
+        - name: config
+          configMap:
+            name: {{ .Values.mysql.existingConfigmap }}
+        {{- end }}
+        {{- if .Values.initdbScriptsConfigMap  }}
+        - name: custom-init-scripts
+          configMap:
+            name: {{ .Values.mysql.initdbScriptsConfigMap }}
+        {{- end }}
+        {{- if .Values.mysql.extraVolumes }}
+        {{- toYaml .Values.mysql.extraVolumes | nindent 8 }}
+        {{- end }}
+  {{- if  .Values.mysql.hostPath }}
+        - name: data
+          hostPath: 
+            path: {{ .Values.mysql.hostPath }} 
+            type: Directory
+      
+  {{- else if and .Values.mysql.persistence.enabled .Values.mysql.persistence.existingClaim }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ tpl .Values.mysql.persistence.existingClaim . }}
+  {{- else if and .Values.mysql.persistence.enabled (not .Values.mysql.persistence.existingClaim) }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels: {{ include "tutorica.labels" . | nindent 10 }}
+          app.kubernetes.io/component: primary
+      {{- if .Values.mysql.persistence.annotations }}
+        annotations:
+          {{- toYaml .Values.mysql.persistence.annotations | nindent 10 }}
+      {{- end }}
+      spec:
+        accessModes:
+          {{- range .Values.mysql.persistence.accessModes }}
+          - {{ . | quote }}
+          {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.mysql.persistence.size | quote }}
+            storageClassName: {{ .Values.global.storageClass  }}
+        {{- if .Values.mysql.persistence.selector }}
+        selector: {{- toYaml .Values.mysql.persistence.selector | nindent 10 }}
+        {{- end -}}
+  {{- end }}
+{{ end }}

@@ -7,9 +7,9 @@ global:
   storageClass: 
 
 replicaCount: 1
-
+################################################## MYSQL ###############################################################
 mysql:
-  enabled: true
+  enabled: false
   # Is use statefulset for deploy 
   useStatefulSet: false
   # list of secrets for pullling image from container registry
@@ -24,25 +24,24 @@ mysql:
 
   # authorization
   auth: 
-    existingSecret: mysql-secret
-    username: tutorica
-    database: tutorica
-  extraEnvVars: 
-  extraEnvVarsCM: 
-  extraEnvVarsSecret: 
+    existingSecret:
+    username:
+    database:
+  extraEnvVars: {}
+  extraEnvVarsCM: {}
+  extraEnvVarsSecret: {}
 
 
   podSecurityContext: 
     enabled: false
-    fsGroup: 1001
-    
-    # enabled: true
-    # fsGroup: 1001
-  tolerations: 
-  affinity: 
-  nodeSelector: 
-  podLabels: 
-  podAnnotations: 
+    # runAsUser: 
+    # fsGroup: 
+    # runAsNonRoot: 
+  tolerations: {}
+  affinity: {} 
+  nodeSelector: {}
+  podLabels: {}
+  podAnnotations: {}
   # healthcheck
   livenessProbe:
     enabled: true
@@ -70,7 +69,7 @@ mysql:
       memory: "180Mi"
       cpu: "120m"
   # hostpath store local node. Store mysql dbs
-  hostPath: /opt/wor/app/tutorica-testing/msyql/   # path to store 
+  hostPath:   # path to store 
   # initdb script for mysql 
   initdbScriptsConfigMap:
   # configuration file 
@@ -120,15 +119,55 @@ mysql:
 
 
   image:
-    imagePullSecrets: []
     repository: mysql
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "latest"
+    tag: ""
+
+
+#######################################################  MONGODB  ####################################################################
+
+mongodb:
+  enabled: false
+  useStatefulSet: false
+  
+
+  # pod security context, restrict user, fs owned
+  podSecurityContext: 
+    enabled: false
+    # runAsUser: 
+    # fsGroup: 
+    # runAsNonRoot: 
+  # additional labels for pod
+  popdLabels: 
+  # deploy component annotations
+  annotations:
+  # pod annotations
+  podAnnotations:
+  # priority
+  priorityClassName:
+  # pod service account that use as an identify with kube-api-server
+  serviceAccount: 
+  # time to stop pod
+  terminationGracePeriodSeconds: 30
+  copyConfigImage:
+    repository: mysql
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: ""
+  
+  # tls
+  tls:
+    enabled: false
+  
+  # auth keys
+  
+  init: 
+    resources:
 
 
 
-
+imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 

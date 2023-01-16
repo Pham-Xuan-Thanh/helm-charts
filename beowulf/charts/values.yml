@@ -11,7 +11,7 @@ replicaCount: 1
 mysql:
   enabled: true
   # Is use statefulset for deploy 
-  useStatefulSet: false
+  useStatefulSet: yes
   # list of secrets for pullling image from container registry
   imagePullSecrets: {}
   # container cmd run
@@ -35,9 +35,10 @@ mysql:
   podSecurityContext: 
     enabled: false
     fsGroup: 1001
-    
-    # enabled: true
-    # fsGroup: 1001
+   ## Container security context
+  containerSecurityContext:
+    enabled: false
+    runAsUser: 1001
   tolerations: 
   affinity: 
   nodeSelector: 
@@ -67,10 +68,10 @@ mysql:
       memory: "100Mi"
       cpu: "80m"
     limits: 
-      memory: "180Mi"
+      memory: "400Mi"
       cpu: "120m"
   # hostpath store local node. Store mysql dbs
-  hostPath: /opt/wor/app/tutorica-testing/msyql/   # path to store 
+  hostPath: /opt/work/app/tutorica-testing/mysql/data   # path to store 
   # initdb script for mysql 
   initdbScriptsConfigMap:
   # configuration file 
