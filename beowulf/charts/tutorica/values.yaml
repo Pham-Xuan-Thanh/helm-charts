@@ -139,7 +139,13 @@ mongodb:
     # fsGroup: 
     # runAsNonRoot: 
   # additional labels for pod
-  popdLabels: 
+  popdLabels:
+  #tolerations specs fields match with node which want to deploy 
+  tolerations:   
+  # affinity
+  affinity: 
+  # specify which node to deploy 
+  nodeSelector:
   # deploy component annotations
   annotations:
   # pod annotations
@@ -159,11 +165,45 @@ mongodb:
   # tls
   tls:
     enabled: false
+    mode: requireTLS
   
   # auth keys
-  
+  auth:
+    enabled: false
+  ########   Init container (copy config, find peer replicaset, ... )
+  # set initcontainer resources  
   init: 
     resources:
+  copyConfig
+  
+
+  # assign resources limits, requests
+  resources: 
+    # limits: 
+    #   cpu: 
+    #   memory: 
+    # requests: 
+    #   cpu:
+    #   memory:
+
+  # additional volumes
+  extraVolumes:
+  # additional volumeMounts
+  extraVolumeMounts:
+
+  # use persistence volume:
+  persistenceVolume:
+    enabled: false
+    annotations: 
+    # ReadWriteOnce ReadWriteMany 
+    accessMode:
+    # pvc size
+    size:
+    # provision for pvc 
+    storageClass: 
+
+    
+
 
 
 
