@@ -17,7 +17,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-    app.kubernetes.io/component: mongo
+      app.kubernetes.io/component: mongo
       {{ include "tutorica.labels" . | nindent 6 }}
   serviceName: {{ print (include "tutorica.fullname" .) "-mongo" }}
   replicas: 1
@@ -26,9 +26,11 @@ spec:
       labels:
         app.kubernetes.io/component: mongo
       {{ include "tutorica.labels" . | nindent 8 }}
-      {{  toYaml .Values.mongodb.popdLabels | nindent 8 }}
-      annotations:
+      {{ with .Values.mongodb.popdLabels}}
+      {{  toYaml . | nindent 8 }}
+      {{ end }}
       {{- with .Values.mongodb.podAnnotations }}
+      annotations:
         {{ toYaml . | indent 8 }}
       {{- end }}
     spec:
@@ -50,7 +52,7 @@ spec:
       {{- end }}
       initContainers:
         - name: copy-config
-          image: "{{ .Values.mongodb.copyConfigImage.repository }}:{{ .Values.mongodb.copyConfigImage.tag }}"
+          image: "{{ .Values.mongodb.copyConfigImage.repository }}:{{ default "latest" .Values.mongodb.copyConfigImage.tag }}"
           imagePullPolicy: {{ .Values.mongodb.copyConfigImage.pullPolicy | quote }}
           command:
             - "sh"
@@ -90,7 +92,7 @@ spec:
 {{ toYaml .Values.mongodb.init.resources | indent 12 }}
       containers:
         - name: {{ template "tutorica.name" . }}
-          image: "{{ .Values.mongodb.image.repository }}:{{ .Values.mongodb.image.tag }}"
+          image: "{{ .Values.mongodb.image.repository }}:{{ default "latest" .Values.mongodb.image.tag }}"
           imagePullPolicy: "{{ .Values.mongodb.image.pullPolicy }}"
         {{- if .Values.mongodb.extraVars }}
           env:
@@ -139,7 +141,7 @@ spec:
             exec:
               command:
                 - mongo
-              {{- if .Values.tls.enabled }}
+              {{- if .Values.mongodb.tls.enabled }}
                 - --ssl
                 - --sslCAFile=/data/configdb/tls.crt
                 - --sslPEMKeyFile=/work-dir/mongo.pem
@@ -194,10 +196,10 @@ spec:
         - name: config
           configMap:
             name: {{ template "tutorica.fullname" . }}-mongodb
-        - name: init
-          configMap:
-            defaultMode: 0755
-            name: {{ template "tutorica.fullname" . }}-init
+        # - name: init
+        #   configMap:
+        #     defaultMode: 0755
+        #     name: {{ template "tutorica.fullname" . }}-init
         {{- if .Values.mongodb.tls.enabled }}
         - name: ca
           secret:
@@ -208,7 +210,7 @@ spec:
         - name: keydir
           secret:
             defaultMode: 0400
-            secretName: {{ template "mongodb-replicaset.keySecret" . }}
+            secretName: {{ ternary .Values.mongodb.auth.keySecret (fail "Enabled Auth: Require Secrets store key") .Values.mongodb.auth.keySecret }}
         {{- end }}
         - name: workdir
           emptyDir: {}
@@ -240,6 +242,11 @@ spec:
         storageClassName: "{{ .Values.mongodb.persistentVolume.storageClass }}"
       {{- end }}
       {{- end }}
+{{- else if .Values.mongodb.hostPath }}
+        - name: datadir
+          hostPath: 
+            path: {{ .Values.mongodb.hostPath }} 
+            type: DirectoryOrCreate
 {{- else }}
         - name: datadir
           emptyDir: {}

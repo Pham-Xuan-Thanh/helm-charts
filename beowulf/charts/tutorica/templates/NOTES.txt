@@ -20,6 +20,13 @@
   echo "Visit http://127.0.0.1:8080 to use your application"
   kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
 {{- end }}
+2. Some key, secrets REQUIRED: 
   echo "Create secret with following property: "
   echo "   mysql-password: password for {{ .Values.mysql.auth.username }}  "
   echo "   mysql-root-password: password for root user"
+  echo "For mongodb supply following secrets:   "
+  echo "   {{ template "tutorica.fullname" . }}-mongodb : ConfiMap; configuration file for mongodb"
+  ehco "   {{ template "tutorica.fullname" . }}-ca : Secret: (if tls enable, its required) tls certificate"
+  {{ if .Values.mongodb.auth.enabled }}
+  echo "   Secret key {{ .Values.mongodb.auth.keySecret }} is required. "  
+  {{ end }}

@@ -9,7 +9,7 @@ global:
 replicaCount: 1
 
 mysql:
-  enabled: true
+  enabled: false
   # Is use statefulset for deploy 
   useStatefulSet: yes
   # list of secrets for pullling image from container registry
@@ -126,6 +126,112 @@ mysql:
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
     tag: "latest"
+
+mongodb:
+  enabled: true
+  useStatefulSet: true
+  
+
+  # pod security context, restrict user, fs owned
+  podSecurityContext: 
+    enabled: false
+    # runAsUser: 
+    # fsGroup: 
+    # runAsNonRoot: 
+  # additional labels for pod
+  popdLabels:
+  #tolerations specs fields match with node which want to deploy 
+  tolerations:   
+  # affinity
+  affinity: 
+  # specify which node to deploy 
+  nodeSelector:
+  # deploy component annotations
+  annotations:
+  # pod annotations
+  podAnnotations:
+  # priority
+  priorityClassName:
+  # pod service account that use as an identify with kube-api-server
+  serviceAccount: 
+  # time to stop pod
+  terminationGracePeriodSeconds: 30
+  # healcheck
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  startupProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  # init copy config to volume
+  copyConfigImage:
+    repository: mongo
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "4.4"
+  
+  # tls
+  tls:
+    enabled: false
+    mode: requireTLS
+  
+  # auth keys
+  auth:
+    enabled: false
+  ########   Init container (copy config, find peer replicaset, ... )
+  # set initcontainer resources  
+  init: 
+    resources:
+  
+    
+  image:
+    repository: mongo
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "4.4"
+  
+
+  # assign resources limits, requests
+  resources: 
+    # limits: 
+    #   cpu: 
+    #   memory: 
+    # requests: 
+    #   cpu:
+    #   memory:
+
+  # additional volumes
+  extraVolumes:
+  # additional volumeMounts
+  extraVolumeMounts:
+  # use Host Path
+  hostPath: /opt/work/app/tutorica-testing/mongodb/data
+  # use persistence volume:
+  persistentVolume:
+    enabled: false
+    annotations: 
+    # ReadWriteOnce ReadWriteMany 
+    accessMode:
+    # pvc size
+    size:
+    # provision for pvc 
+    storageClass: 
+
 
 
 

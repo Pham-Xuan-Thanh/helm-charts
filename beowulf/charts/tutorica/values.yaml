@@ -156,6 +156,29 @@ mongodb:
   serviceAccount: 
   # time to stop pod
   terminationGracePeriodSeconds: 30
+  # healtcheck 
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  startupProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  # init container copy files to volume
   copyConfigImage:
     repository: mysql
     pullPolicy: IfNotPresent
@@ -170,11 +193,22 @@ mongodb:
   # auth keys
   auth:
     enabled: false
+    keySecret: 
   ########   Init container (copy config, find peer replicaset, ... )
   # set initcontainer resources  
   init: 
     resources:
-  copyConfig
+  copyConfig:
+    repository: mongo
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "4.4"
+
+  image:
+    repository: mongo
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "4.4"
   
 
   # assign resources limits, requests
@@ -190,9 +224,10 @@ mongodb:
   extraVolumes:
   # additional volumeMounts
   extraVolumeMounts:
-
+  # use hostpath
+  hostPath: 
   # use persistence volume:
-  persistenceVolume:
+  persistentVolume:
     enabled: false
     annotations: 
     # ReadWriteOnce ReadWriteMany 

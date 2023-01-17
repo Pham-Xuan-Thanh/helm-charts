@@ -195,7 +195,7 @@ spec:
         - name: data
           hostPath: 
             path: {{ .Values.mysql.hostPath }} 
-            type: Directory
+            type: DirectoryOrCreate
       
   {{- else if and .Values.mysql.persistence.enabled .Values.mysql.persistence.existingClaim }}
         - name: data
