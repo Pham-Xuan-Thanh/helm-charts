@@ -21,12 +21,30 @@
   kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
 {{- end }}
 2. Some key, secrets REQUIRED: 
+  {{ if .Values.mysql.auth.existingSecret }}
   echo "Create secret with following property: "
+    name: {{ .Values.mysql.auth.existingSecret }}
   echo "   mysql-password: password for {{ .Values.mysql.auth.username }}  "
   echo "   mysql-root-password: password for root user"
+  {{ end }}
+  {{ with .Values.mongodb.auth.enabled }}
   echo "For mongodb supply following secrets:   "
   echo "   {{ template "tutorica.fullname" . }}-mongodb : ConfiMap; configuration file for mongodb"
-  ehco "   {{ template "tutorica.fullname" . }}-ca : Secret: (if tls enable, its required) tls certificate"
+  ehco "   {{ template "tutorica.fullname" . }}-ca : Secret: (if tls enable, its required) tls certificate (tls.cert, tls.key)"
+  {{ end }}
   {{ if .Values.mongodb.auth.enabled }}
-  echo "   Secret key {{ .Values.mongodb.auth.keySecret }} is required. "  
+  echo "   Secret key {{ .Values.mongodb.auth.keySecret }} is required. for mongo key to auth in Replication "  
+  {{ end }}
+  {{ if .Values.api.enabled }}
+    API: provide following secrets, configmaps:
+      1. tutorica.properties configuration for tutorica:
+    {{-  if .Values.api.persistent.configmap }}
+        ConfigMap: 
+         - name: {{ .Values.api.persistent.configmap}}
+         - properties: tutorica.properties (configuration for app )
+    {{- else if .Values.api.persistent.secret }}
+        Secret: 
+        - name: {{ .Values.api.persistent.secret }}
+        - properties: tutorica.properties ( configuration for app )
+    {{- end }}
   {{ end }}

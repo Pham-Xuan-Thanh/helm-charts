@@ -9,9 +9,9 @@ global:
 replicaCount: 1
 
 mysql:
-  enabled: false
+  enabled: true
   # Is use statefulset for deploy 
-  useStatefulSet: yes
+  useStatefulSet: false
   # list of secrets for pullling image from container registry
   imagePullSecrets: {}
   # container cmd run
@@ -129,7 +129,7 @@ mysql:
 
 mongodb:
   enabled: true
-  useStatefulSet: true
+  useStatefulSet: false
   
 
   # pod security context, restrict user, fs owned
@@ -234,19 +234,65 @@ mongodb:
 
 
 
+api: 
+  enabled: true
+  replica: 1 
 
+  imagePullSecrets:
+  - gcr-json-key
+  # Deployment annotations
+  annotations:
+  # pod labels
+  podLabels: {}
+  # pod annotations
+  podAnnotations: {}
+  securityContext:
+    enabled: false
+    # runAsUser: 
+    # fsGroup: 
+    # runAsNonRoot: 
+  image:
+    repository: asia.gcr.io/quickom-sub-apps/tutorica-testing-api
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "v0.28"
+  extraEnv:
 
-nameOverride: ""
-fullnameOverride: ""
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  
+  resources: 
+    # limits: 
+    #   cpu: 
+    #   memory: 
+    # requests: 
+    #   cpu:
+    #   memory:
 
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # Annotations to add to the service account
-  annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: ""
+  extraVolumeMounts:
+
+  persistent:
+    enabled: false
+    # persistenVolume Claim declared
+    existingClaim:
+    # configmap for configuration  file
+    configmap:   
+    # secrets for configuration file
+    secret: tutorica-config
+  # extra volumes for mounting
+  extraVolumes:
 
 podAnnotations: {}
 

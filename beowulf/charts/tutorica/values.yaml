@@ -239,8 +239,64 @@ mongodb:
 
     
 
+api: 
+  enabled: true
+  replica: 1 
 
+  imagePullSecrets:
+  # Deployment annotations
+  annotations:
+  # pod labels
+  podLabels: {}
+  # pod annotations
+  podAnnotations: {}
+  securityContext:
+    enabled: false
+    # runAsUser: 
+    # fsGroup: 
+    # runAsNonRoot: 
+  image:
+    repository: asia.gcr.io/quickom-sub-apps/tutorica-testing-api
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "0.1"
+  extraEnv:
 
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  
+  resources: 
+    # limits: 
+    #   cpu: 
+    #   memory: 
+    # requests: 
+    #   cpu:
+    #   memory:
+
+  extraVolumeMounts:
+
+  persistent:
+    enabled: false
+    # persistenVolume Claim declared
+    existingClaim:
+    # configmap for configuration  file
+    configmap:   
+    # secrets for configuration file
+    secret:
+  # extra volumes for mounting
+  extraVolumes:
 
 imagePullSecrets: []
 nameOverride: ""

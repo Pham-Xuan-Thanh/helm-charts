@@ -32,7 +32,9 @@ spec:
       labels:
         {{ include "tutorica.labels" . | nindent 8 }}
         app.kubernetes.io/component: primary
+        {{ if .Values.mysql.podLabels }}
         {{  toYaml .Values.mysql.podLabels | nindent 8 }}
+        {{ end }}
     spec:
       {{- with .Values.mysql.imagePullSecrets }}
       {{- toYaml . | nindent 6 }}
