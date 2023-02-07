@@ -1,6 +1,6 @@
 apiVersion: v2
 name: tutorica
-description: A Helm chart for Kubernetes
+description: THE PLATFORM FOR DISTANCE TEACHING AND TRAINING
 
 # A chart can be either an 'application' or a 'library' chart.
 #

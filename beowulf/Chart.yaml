@@ -1,6 +1,6 @@
 apiVersion: v2
 name: beowulf
-description: A Helm chart for Kubernetes
+description: Enabling businesses to provide communication features for their businesses without barriers
 
 # A chart can be either an 'application' or a 'library' chart.
 #
