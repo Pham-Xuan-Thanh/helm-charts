@@ -59,13 +59,13 @@ spec:
 	{{- toYaml . | nindent 8 }}
 {{- end }}
         ports:
-        - name: http
-          containerPort: 3000
+        - name: api
+          containerPort: 8080
         {{- if .Values.api.livenessProbe.enabled }}
         livenessProbe:
           httpGet:
-            path: /api/info
-            port: http
+            path: /api/up
+            port: api
           initialDelaySeconds: {{ .Values.api.livenessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.api.livenessProbe.periodSeconds }}
           timeoutSeconds: {{ .Values.api.livenessProbe.timeoutSeconds }}
@@ -75,8 +75,8 @@ spec:
         {{- if .Values.api.readinessProbe.enabled }}
         readinessProbe:
           httpGet:
-            path: /api/info
-            port: http
+            path: /api/up
+            port: api
           initialDelaySeconds: {{ .Values.api.readinessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.api.readinessProbe.periodSeconds }}
           timeoutSeconds: {{ .Values.api.readinessProbe.timeoutSeconds }}
@@ -87,7 +87,8 @@ spec:
 {{ toYaml .Values.api.resources | indent 10 }}
         volumeMounts:
         - name: config
-          mountPath: /opt/app/tutorica/tutorica.properties
+          mountPath: /opt/work/tutorica/conf/tutorica.properties
+          subPath: tutorica.properties
         {{- with .Values.api.extraVolumeMounts }}
           {{ toYaml . | nindent 8  }}
         {{- end }}          

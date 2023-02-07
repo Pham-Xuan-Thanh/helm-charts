@@ -1,0 +1,295 @@
+{{- if  .Values.redis.enabled }}
+apiVersion: apps/v1
+kind: {{ ternary "StatefulSet" "Deployment" .Values.redis.useStatefulSet | quote }}
+metadata:
+  name: {{ print  (include "tutorica.name" . ) "-redis" }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "tutorica.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+    {{ with .Values.redis.podLabels -}}
+      {{ toYaml . | nindent 6 }}
+    {{- end }}
+  {{- with .Values.redis.annotations }}
+  annotations:
+    {{- toYaml .  | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels: 
+    {{- include "tutorica.labels" . | nindent 6 }}
+      app.kubernetes.io/component: redis
+  {{- if .Values.redis.useStatefulSet }}
+  serviceName: {{ printf "%s-headless" (include "tutorica.fullname" .) }}
+  {{- end }}
+
+  {{- if .Values.redis.updateStrategy }}
+  updateStrategy: {{- toYaml .Values.redis.updateStrategy | nindent 4 }}
+  {{- end }}
+  {{- if and .Values.redis.minReadySeconds (semverCompare ">= 1.25" .Capabilities.KubeVersion ) }}
+  minReadySeconds: {{ .Values.redis.minReadySeconds }}
+  {{- end }}
+  template:
+    metadata:
+      labels: 
+        {{- include "tutorica.labels" . | nindent 8 }}
+        app.kubernetes.io/component: redis
+      {{- with .Values.redis.podAnnotations }}
+      annotations:
+      {{- end }}
+    spec:
+      {{- with .Values.redis.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range $secret :=  .  }}
+        - name: {{ $secret }}
+        {{- end }}
+    {{- end }}
+      {{- if .Values.redis.hostAliases }}
+      hostAliases: 
+        {{- toYaml .Values.redis.hostAliases | nindent 8 }}
+      {{- end }}
+      {{- if .Values.redis.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.redis.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      {{- with .Values.redis.serviceAccountName }}
+      serviceAccountName: {{ toYaml . | quote }}
+      {{- end }}
+      {{- if .Values.redis.priorityClassName }}
+      priorityClassName: {{ .Values.redis.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.redis.affinity }}
+      affinity: {{- toYaml .Values.redis.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.redis.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.redis.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.redis.tolerations }}
+      tolerations: {{- toYaml .Values.redis.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if .Values.redis.topologySpreadConstraints }}
+      topologySpreadConstraints:
+         {{- toYaml .Values.redis.topologySpreadConstraints  | nindent 8 }}
+      {{- end }}
+      {{- if .Values.redis.shareProcessNamespace }}
+      shareProcessNamespace: {{ .Values.redis.shareProcessNamespace }}
+      {{- end }}
+      {{- if .Values.redis.schedulerName }}
+      schedulerName: {{ .Values.redis.schedulerName | quote }}
+      {{- end }}
+      {{- if .Values.redis.dnsPolicy }}
+      dnsPolicy: {{ .Values.redis.dnsPolicy }}
+      {{- end }}
+      {{- if .Values.redis.dnsConfig }}
+      dnsConfig: {{- toYaml .Values.redis.dnsConfig | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.redis.terminationGracePeriodSeconds }}
+      containers:
+        - name: redis
+          image: {{ printf "%s:%s" .Values.redis.image.repository ( default "latest" .Values.redis.image.tag) }}
+          imagePullPolicy: {{ .Values.redis.image.pullPolicy | quote }}
+          {{- if .Values.redis.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.redis.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          {{- if .Values.redis.command }}
+          command: 
+            - {{ .Values.redis.command }}
+          {{- end }}
+          {{- if .Values.redis.args }}
+          args: 
+            {{- range $arg:= .Values.redis.args  }}
+            - {{ quote $arg}}
+             {{- end }}
+          {{- else }}
+          args:
+            - "--port"
+            - "$(REDIS_PORT)"
+            {{- if .Values.redis.auth.existingSecretPasswordKey }}
+            - "--requirepass"
+            - "$(REDIS_PASSWORD)"
+            {{- else }}
+            - "--protected-mode"
+            - "no"
+            {{- end }}
+            {{- if .Values.redis.tls.enabled }}
+            - --tls-port $(REDIS_TLS_PORT)
+            - --tls-cert-file $(REDIS_TLS_CERT_FILE)
+            - --tls-key-file $(REDIS_TLS_KEY_FILE)
+            - --tls-ca-cert-file $(REDIS_TLS_CA_FILE)
+            {{- end }}
+            {{- if .Values.redis.config.configMapName }}
+            - --include
+            - "/opt/work/redis/mounted-etc/redis.conf"
+            {{- end }}
+          {{- end }}
+          env:
+            - name: REDIS_MASTER_PORT_NUMBER
+              value: {{ .Values.redis.containerPorts | quote }}
+            - name: ALLOW_EMPTY_PASSWORD
+              value: {{ ternary "no" "yes" .Values.redis.auth.enabled | quote }}
+            {{- if .Values.redis.auth.enabled }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "tutorica.secretName" . }}
+                  key: {{ default "redis_password" .Values.redis.auth.existingSecretPasswordKey }}
+            {{- end }}
+            - name: REDIS_TLS_ENABLED
+              value: {{ ternary "yes" "no" .Values.redis.tls.enabled | quote }}
+            {{- if .Values.redis.tls.enabled }}
+            - name: REDIS_TLS_PORT
+              value: {{ .Values.redis.containerPorts | quote }}
+            - name:  REDIS_TLS_AUTH_CLIENTS
+              value: {{ ternary "yes" "no" .Values.redis.tls.authClients | quote }}
+            - name:  REDIS_TLS_CERT_FILE
+              value: /opt/work/redis/certs/tls.crt
+            - name:  REDIS_TLS_KEY_FILE
+              value: /opt/work/redis/certs/tls.key
+            - name:  REDIS_TLS_CA_FILE
+              value: /opt/work/redis/certs/ca.crt
+            {{- if .Values.redis.tls.dhParamsFile }}
+            - name:  REDIS_TLS_DH_PARAMS_FILE
+              value: /opt/work/redis/certs/dhparam.pem
+            {{- end }}
+            {{- else }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.containerPorts | quote }}
+            {{- end }}
+            - name: REDIS_DATA_DIR
+              value: {{ .Values.redis.persistence.dataPath }}
+            {{- if .Values.redis.extraEnvVars }}
+              {{- toYaml .Values.redis.extraEnvVars | nindent 14 -}}
+            {{- end }}
+          {{- if or .Values.redis.extraEnvVarsCM .Values.redis.extraEnvVarsSecret }}
+          envFrom:
+            {{- if .Values.redis.extraEnvVarsCM }}
+            - configMapRef:
+              name: {{ .Values.redis.extraEnvVarsCM }}
+            {{- end }}
+            {{- if .Values.redis.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ .Values.redis.extraEnvVarsSecret }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: redis
+              containerPort: {{ .Values.redis.containerPorts }}
+          {{-  if .Values.redis.startupProbe.enabled }}
+          startupProbe: 
+            initialDelaySeconds: {{ .Values.redis.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.redis.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.redis.startupProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.redis.startupProbe.successThreshold }}
+            failureThreshold: {{ .Values.redis.startupProbe.failureThreshold }}
+            exec:
+              command:
+                - /bin/sh
+                - -c 
+                - timeout -s 3 {{ .Values.redis.startupProbe.timeoutSeconds }}  redis-cli -h localhost  {{ if .Values.redis.tls.enabled }} -p $REDIS_TLS_PORT --tls --cacert $REDIS_TLS_CA_FILE {{ if .Values.tls.authClients }} --cert $REDIS_TLS_CERT_FILE --key $REDIS_TLS_KEY_FILE {{- end }} {{- else -}} -p $REDIS_PORT {{- end }} ping 
+          {{- end }}
+          {{-  if .Values.redis.livenessProbe.enabled }}
+          livenessProbe:
+            initialDelaySeconds: {{ .Values.redis.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.redis.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.redis.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.redis.livenessProbe.successThreshold }}
+            failureThreshold: {{ .Values.redis.livenessProbe.failureThreshold }}
+            exec:
+              command:
+                - /bin/sh
+                - -c 
+                - timeout -s 3 {{ .Values.redis.startupProbe.timeoutSeconds }}  redis-cli -h localhost  {{ if .Values.redis.tls.enabled }} -p $REDIS_TLS_PORT --tls --cacert $REDIS_TLS_CA_FILE {{ if .Values.tls.authClients }} --cert $REDIS_TLS_CERT_FILE --key $REDIS_TLS_KEY_FILE {{- end }} {{- else -}} -p $REDIS_PORT {{- end }} ping 
+          {{- end }}
+          {{-  if .Values.redis.readinessProbe.enabled }}
+          readinessProbe:
+            initialDelaySeconds: {{ .Values.redis.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.redis.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.redis.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.redis.readinessProbe.successThreshold }}
+            failureThreshold: {{ .Values.redis.readinessProbe.failureThreshold }}
+            exec:
+              command:
+                - /bin/sh
+                - -c 
+                - timeout -s 3 {{ .Values.redis.startupProbe.timeoutSeconds }}  redis-cli -h localhost  {{ if .Values.redis.tls.enabled }} -p $REDIS_TLS_PORT --tls --cacert $REDIS_TLS_CA_FILE {{ if .Values.tls.authClients }} --cert $REDIS_TLS_CERT_FILE --key $REDIS_TLS_KEY_FILE {{- end }} {{- else -}} -p $REDIS_PORT {{- end }} ping 
+          {{- end }}
+          {{- if .Values.redis.resources }}
+          resources: {{- toYaml .Values.redis.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: redis-data
+              mountPath: {{ .Values.redis.persistence.dataPath }}
+              {{- if .Values.redis.persistence.subPath }}
+              subPath: {{ .Values.redis.persistence.subPath }}
+              {{- else if .Values.redis.persistence.subPathExpr }}
+              subPathExpr: {{ .Values.redis.persistence.subPathExpr }}
+              {{- end }}
+            {{- if .Values.redis.config.configMapName }}
+            - name: config
+              mountPath: /opt/work/redis/mounted-etc
+            {{- end }}
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.redis.tls.enabled }}
+            - name: redis-certificates
+              mountPath: /opt/work/redis/certs
+              readOnly: true
+            {{- end }}
+            {{- if .Values.redis.extraVolumeMounts }}
+            {{- range .Values.redis.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 -}}
+            {{- end }}
+            {{- end }}
+      volumes:
+        {{- if .Values.redis.config.configMapName }}
+        - name: config
+          configMap:
+            name: {{ include "tutorica.redis.configmapName" . }}
+        {{- end }}
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.redis.tls.enabled }}
+        - name: redis-certificates
+          secret:
+            secretName: {{ include "tutorica.tlsSecretName" .Values.redis.tls }}
+            defaultMode: 256
+        {{- end }}
+  {{- if .Values.redis.persistence.enabled }}
+
+        {{- if .Values.redis.persistence.existingClaim }}
+        - name: redis-data
+          persistentVolumeClaim:
+          claimName: {{ .Values.redis.persistence.existingClaim }}
+        {{- else if .Values.redis.persistence.hostPath }}
+        - name: redis-data
+          hostPath: 
+            path: {{ .Values.redis.persistence.hostPath }}
+            type: DirectoryOrCreate
+        {{- else }}
+    volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+        labels:
+          app: "{{ printf "%s-redis" (include "tutorica.fullname" .) }}"
+          component: "redis"
+          release: {{ .Release.Name | quote }}
+          heritage: {{ .Release.Service | quote }}
+      spec:
+        accessModes:
+        {{- range .Values.redis.persistence.accessModes }}
+          - {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.redis.persistence.size | quote }}
+      {{- if .Values.redis.persistence.storageClass }}
+      {{- if (eq "-" .Values.redis.persistence.storageClass) }}
+        storageClassName: ""
+      {{- else }}
+        storageClassName: {{ .Values.redis.persistence.storageClass | quote }}
+      {{- end }}
+      {{- end }}
+  {{- end }}
+  {{- else  }}
+        - name: redis-data
+          emptyDir: {}
+  {{- end }}
+{{- end }}

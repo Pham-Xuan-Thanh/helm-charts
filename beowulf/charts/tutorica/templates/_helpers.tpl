@@ -60,3 +60,45 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+
+{{/*
+Retrieve secret name from context
+*/}}
+{{- define "tutorica.secretName" -}}
+{{- if .existingSecret  -}}
+{{- print .existingSecret -}}
+{{- else -}}
+{{- print ( include "tutorica.fullname" . )  -}}
+{{- end -}}
+{{- end -}}
+
+
+
+
+{{/*
+Retrieve tls secret name from context
+Params (one of ):
+    - existingSecret:
+    - certificateSecret:
+*/}}
+{{- define "tutorica.tlsSecretName" -}}
+{{- $secretName := coalesce .existingSecret  .certificateSecret -}}
+{{- if $secretName -}}
+    {{- printf "%s" $secretName -}}
+{{- else -}}
+    {{- printf "%s-crt" (include "tutorica.fullname" . ) -}}
+{{- end -}}
+{{- end -}}
+
+
+{{/*
+Redis config map name
+*/}}
+{{- define "tutorica.redis.configmapName" -}}
+{{- if .Values.redis.config.configMapName -}}
+    {{- printf "%s" .Values.redis.config.configMapName -}}
+{{- else -}}
+    {{- printf "%s-redis-config" ( include "tutorica.name" $ ) -}}
+{{- end -}}
+{{- end -}}

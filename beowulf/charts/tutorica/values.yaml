@@ -115,15 +115,22 @@ mysql:
     ##  pvc existing  name
     existingClaim: 
 
-
-
-
   image:
     repository: mysql
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
     tag: ""
 
+  service:
+    type: ClusterIP   # ClusterIP, LoadBalancer, NodePort
+    portName: mysql
+    port: 3306
+    clusterIP: 
+    loadBalancerIP:
+    externalIPs:
+    nodePort:
+
+    annotations:
 
 #######################################################  MONGODB  ####################################################################
 
@@ -213,6 +220,12 @@ mongodb:
 
   # assign resources limits, requests
   resources: 
+    requests:
+      memory: "100Mi"
+      cpu: "80m"
+    limits: 
+      memory: "180Mi"
+      cpu: "120m"
     # limits: 
     #   cpu: 
     #   memory: 
@@ -236,8 +249,147 @@ mongodb:
     size:
     # provision for pvc 
     storageClass: 
+  service:
+    type: ClusterIP   # ClusterIP, LoadBalancer, NodePort
+    portName: mongodb
+    port: 27017
+    clusterIP: 
+    loadBalancerIP:
+    externalIPs:
+    nodePort:
 
+    annotations: 
+############################################################### Redis ############################################################
+redis:
+  enabled: false
+  useStatefulSet: false
+  annotations:
+  podLabels:
+  # OnDelete or RollingUpdate
+  updateStrategy:
+
+  minReadySeconds:
+  # pod annotations
+  podAnnotations:
+
+  schedulerName:
+  shareProcessNamespace:
+  topologySpreadConstraints:
+  imagePullSecrets:
+  hostAliases:
+  # - ip: "127.0.0.1"
+  #   hostnames:
+  #   - "foo.local"
+  #   - "bar.local"
+  podSecurityContext:
+    enabled: false
+    runAsUser: 
+    fsGroup: 
+    runAsNonRoot: 
+  # 
+  serviceAccountName:
+  #
+  priorityClassName:
+  # podAffinity, podAntiAffinity and nodeAffinity
+  affinity:
+  # Selector node by labels
+  nodeSelector:
+  
+  tolerations:
+  # dnsPolicy : Default, ClusterFirst, ClusterFirstWithHostNet and None
+  dnsPolicy:
+  dnsConfig:
+    # nameservers:
+    #   - 1.2.3.4
+    # searches:
+    #   - my.dns.search.suffix
+    # options:
+    #   - name: ndots
+    #     value: "2"
+  terminationGracePeriodSeconds: 60
+  diagnosticMode:
+
+  image:
+    repository: redis
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: 7-alpine
+
+  containerSecurityContext:
+    enabled: false
+    runAsUser: 
+    fsGroup: 
+    runAsNonRoot: 
+  # main container command and arguments 
+  command:
+  args:
+  # conainer ports:
+  containerPorts: 6379
+  # authenctication 
+  auth:
+    enabled: false
+    existingSecretPasswordKey:
+  # configurations
+  config:
+    configMapName: 
+  # tls 
+  tls:
+    enabled: false
+    authClients:
+    dhParamsFile: false
+    existingSecret: 
+  # storage 
+  persistence:
+    enabled: true
+    dataPath: /data
+    subPath:
+    subPathExpr:
+    existingClaim: 
+    hostPath: /opt/work/tutorica-testing/redis/data
+
+    accessModes:
+    size:
+    storageClass:
     
+
+  # additional environment variables
+  extraEnvVars:
+  # just name of component
+  extraEnvVarsCM:
+  extraEnvVarsSecret:
+  # Volume mounts addition
+  extraVolumeMounts:
+
+  ##
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 20
+    periodSeconds: 5
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 5
+  ##
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 20
+    periodSeconds: 5
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 5
+  ##
+  startupProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 22
+  
+  resources:
+
+
+
+
 
 api: 
   enabled: true
@@ -250,11 +402,14 @@ api:
   podLabels: {}
   # pod annotations
   podAnnotations: {}
+  affinity:
+  podAntiAffinity:
+  podAntiAffinityTopologyKey:
   securityContext:
     enabled: false
-    # runAsUser: 
-    # fsGroup: 
-    # runAsNonRoot: 
+    runAsUser: 
+    fsGroup: 
+    runAsNonRoot: 
   image:
     repository: asia.gcr.io/quickom-sub-apps/tutorica-testing-api
     pullPolicy: IfNotPresent
@@ -271,13 +426,19 @@ api:
     successThreshold: 1
   readinessProbe:
     enabled: true
-    initialDelaySeconds: 30
-    periodSeconds: 10
-    timeoutSeconds: 1
+    initialDelaySeconds: 60
+    periodSeconds: 5
+    timeoutSeconds: 2
     failureThreshold: 3
     successThreshold: 1
   
   resources: 
+    requests:
+      memory: "200Mi"
+      cpu: "150m"
+    limits: 
+      memory: "400Mi"
+      cpu: "3500m"
     # limits: 
     #   cpu: 
     #   memory: 
@@ -297,6 +458,103 @@ api:
     secret:
   # extra volumes for mounting
   extraVolumes:
+
+  service:
+    type: ClusterIP   # ClusterIP, LoadBalancer, NodePort
+    portName: api
+    port: 8080
+    clusterIP: 
+    loadBalancerIP:
+    externalIPs:
+    nodePort:
+
+    annotations: 
+
+
+admin: 
+  enabled: true
+  replica: 1 
+
+  imagePullSecrets:
+  # Deployment annotations
+  annotations:
+  # pod labels
+  podLabels: {}
+  # pod annotations
+  podAnnotations: {}
+  affinity:
+  podAntiAffinity:
+  podAntiAffinityTopologyKey:
+  securityContext:
+    enabled: false
+    runAsUser: 
+    fsGroup: 
+    runAsNonRoot: 
+  image:
+    repository: asia.gcr.io/quickom-sub-apps/tutorica-testing-admin
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "0.1"
+  extraEnv:
+
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  startupProbe:
+    enabled: true
+    initialDelaySeconds: 90
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 30
+    successThreshold: 1
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 90
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+    successThreshold: 1
+  
+  resources: 
+    requests:
+      memory: "200Mi"
+      cpu: "150m"
+    limits: 
+      memory: "400Mi"
+      cpu: "350m"
+    # limits: 
+    #   cpu: 
+    #   memory: 
+    # requests: 
+    #   cpu:
+    #   memory:
+
+  extraVolumeMounts:
+
+  persistent:
+    enabled: false
+    # persistenVolume Claim declared
+    existingClaim:
+    # configmap for configuration  file
+    configmap:   
+    # secrets for configuration file
+    secret:
+  # extra volumes for mounting
+  extraVolumes:
+  service:
+    type: ClusterIP   # ClusterIP, LoadBalancer, NodePort
+    portName: admin
+    port: 1106
+    clusterIP: 
+    loadBalancerIP:
+    externalIPs:
+    nodePort:
+
+    annotations:
 
 imagePullSecrets: []
 nameOverride: ""

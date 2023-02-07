@@ -1,41 +1,27 @@
-1. Get the application URL by running these commands:
-{{- if .Values.ingress.enabled }}
-{{- range $host := .Values.ingress.hosts }}
-  {{- range .paths }}
-  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
-  {{- end }}
+{{- if   .Values.mysql.enabled }}
+    Mysql server is running as http://{{ print ( include "tutorica.fullname" .) "-mysql" }}:{{ .Values.mysql.service.port }} with portName: {{ .Values.mysql.service.portName }}
 {{- end }}
-{{- else if contains "NodePort" .Values.service.type }}
-  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "tutorica.fullname" . }})
-  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
-  echo http://$NODE_IP:$NODE_PORT
-{{- else if contains "LoadBalancer" .Values.service.type }}
-     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
-           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "tutorica.fullname" . }}'
-  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "tutorica.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
-  echo http://$SERVICE_IP:{{ .Values.service.port }}
-{{- else if contains "ClusterIP" .Values.service.type }}
-  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "tutorica.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
-  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
-  echo "Visit http://127.0.0.1:8080 to use your application"
-  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- if .Values.mongodb.enabled }}
+    MongoDB server is running as http://{{ print ( include "tutorica.fullname" .) "-mongodb" }}:{{ .Values.mongodb.service.port }} with portName: {{ .Values.mongodb.service.portName }}
 {{- end }}
-2. Some key, secrets REQUIRED: 
+1. Some key, secrets REQUIRED: 
+  {{- if .Values.mysql.enabled }}
   {{ if .Values.mysql.auth.existingSecret }}
   echo "Create secret with following property: "
     name: {{ .Values.mysql.auth.existingSecret }}
   echo "   mysql-password: password for {{ .Values.mysql.auth.username }}  "
   echo "   mysql-root-password: password for root user"
   {{ end }}
-  {{ with .Values.mongodb.auth.enabled }}
+  {{ end }}
+  {{- with .Values.mongodb.auth.enabled }}
   echo "For mongodb supply following secrets:   "
   echo "   {{ template "tutorica.fullname" . }}-mongodb : ConfiMap; configuration file for mongodb"
   ehco "   {{ template "tutorica.fullname" . }}-ca : Secret: (if tls enable, its required) tls certificate (tls.cert, tls.key)"
-  {{ end }}
-  {{ if .Values.mongodb.auth.enabled }}
+  {{- end }}
+  {{- if .Values.mongodb.auth.enabled }}
   echo "   Secret key {{ .Values.mongodb.auth.keySecret }} is required. for mongo key to auth in Replication "  
-  {{ end }}
-  {{ if .Values.api.enabled }}
+  {{- end }}
+  {{- if .Values.api.enabled }}
     API: provide following secrets, configmaps:
       1. tutorica.properties configuration for tutorica:
     {{-  if .Values.api.persistent.configmap }}
@@ -47,4 +33,27 @@
         - name: {{ .Values.api.persistent.secret }}
         - properties: tutorica.properties ( configuration for app )
     {{- end }}
-  {{ end }}
+  {{- end }}
+  {{- if .Values.redis.enabled }}
+    {{- if .Values.redis.auth.enabled }}
+      Redis keys: 
+        {{- if .Values.redis.auth.existingSecretPasswordKey }}  
+        - Secret for redis password : {{ template "tutorica.secretName" . }} 
+        {{- end }}
+        Require needed following configmaps:
+          {{- if .Values.redis.config.configMapName }}
+          - {{ include "tutorica.redis.configmapName" . }}
+          {{- end }}
+          {{- range .Values.redis.extraEnvVarsCM }}
+          - {{ . }}
+          {{- end }}
+        Require needed following secrets: 
+          {{- if .Values.redis.tls.enabled }}
+          - {{ include "tutorica.tlsSecretName" .Values.redis.tls }}
+          {{- end }}
+          {{- range .Values.redis.extraEnvVarsSecret }}
+          - {{ . }}
+          {{- end }}
+
+    {{- end }}
+  {{- end }}
