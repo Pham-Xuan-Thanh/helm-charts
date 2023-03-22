@@ -1,6 +1,5 @@
 {{- if .Values.ingress.enabled -}}
 {{- $fullName := include "biploma.fullname" . -}}
-{{- $svcPort := .Values.service.port -}}
 {{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
   {{- if not (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class") }}
   {{- $_ := set .Values.ingress.annotations "kubernetes.io/ingress.class" .Values.ingress.className}}
@@ -15,19 +14,27 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ $fullName }}
+  name: {{ $fullName }}-ingress
   labels:
-    {{- include "biploma.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
+    app: {{ $fullName }}
+    chart: {{ include "biploma.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+  {{- with .Values.ingress.letsecryptIssuer }}
+    cert-manager.io/cluster-issuer: {{ quote . }}
   {{- end }}
+  {{- if .Values.ingress.annotations }}
+  {{- range $key, $value := .Values.ingress.annotations }}
+    {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}
 spec:
-  {{- if and .Values.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+{{- if and .Values.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
   ingressClassName: {{ .Values.ingress.className }}
   {{- end }}
-  {{- if .Values.ingress.tls }}
   tls:
+  {{- if .Values.ingress.tls }}
     {{- range .Values.ingress.tls }}
     - hosts:
         {{- range .hosts }}
@@ -35,6 +42,27 @@ spec:
         {{- end }}
       secretName: {{ .secretName }}
     {{- end }}
+  {{- end }}
+  {{- if and  .Values.admin.ingress.enabled .Values.admin.ingress.tls  }}
+    - hosts:
+        {{ range .Values.admin.ingress.tls.hosts }}
+        - {{ . | quote }}
+        {{- end}}
+      secretName: {{- .Values.admin.ingress.tls.secretName }}
+  {{- end }}
+  {{- if and  .Values.api.ingress.enabled .Values.api.ingress.tls  }}
+    - hosts:
+        {{ range .Values.api.ingress.tls.hosts }}
+        - {{ . | quote }}
+        {{- end}}
+      secretName: {{- .Values.api.ingress.tls.secretName }}
+  {{- end }}
+  {{- if and  .Values.web.ingress.enabled .Values.web.ingress.tls  }}
+    - hosts:
+        {{ range .Values.web.ingress.tls.hosts }}
+        - {{ . | quote }}
+        {{- end}}
+      secretName: {{- .Values.web.ingress.tls.secretName }}
   {{- end }}
   rules:
     {{- range .Values.ingress.hosts }}
@@ -47,15 +75,104 @@ spec:
             pathType: {{ .pathType }}
             {{- end }}
             backend:
+            {{- if .backend.service }}
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ $fullName }}
+                name: {{ .backend.service.name }}
                 port:
-                  number: {{ $svcPort }}
+                  number: {{ .backend.service.port }}
               {{- else }}
-              serviceName: {{ $fullName }}
-              servicePort: {{ $svcPort }}
+              serviceName: {{ .backend.service.name }}
+              servicePort: {{ .backend.service.port }}
               {{- end }}
+            {{- end }}
+            {{- with .backend.resource }}
+              {{ toYaml . | nindent 14 }}
+            {{- end }}
           {{- end }}
+    {{- end }}
+    {{- if .Values.admin.ingress.enabled }}
+    {{- range .Values.admin.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            {{- if and .pathType (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
+            pathType: {{ .pathType }}
+            {{- end }}
+            backend:
+            {{- if .backend.service }}
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+              service:
+                name: {{ default (print (include "biploma.fullname" $) "-admin") .backend.service.name }}
+                port:
+                  number: {{ default $.Values.admin.service.port .backend.service.port }}
+              {{- else }}
+              serviceName: {{ .backend.service.name }}
+              servicePort: {{ .backend.service.port }}
+              {{- end }}
+            {{- end }}
+            {{- with .backend.resource }}
+              {{ toYaml . | nindent 14 }}
+            {{- end }}
+          {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if .Values.api.ingress.enabled }}
+    {{- range .Values.api.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            {{- if and .pathType (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
+            pathType: {{ .pathType }}
+            {{- end }}
+            backend:
+            {{- if .backend.service }}
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+              service:
+                name: {{ default (print (include "biploma.fullname" $) "-api") .backend.service.name }}
+                port:
+                  number: {{ default $.Values.api.service.port .backend.service.port }}
+              {{- else }}
+              serviceName: {{ .backend.service.name }}
+              servicePort: {{ .backend.service.port }}
+              {{- end }}
+            {{- end }}
+            {{- with .backend.resource }}
+              {{ toYaml . | nindent 14 }}
+            {{- end }}
+          {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if .Values.web.ingress.enabled }}
+    {{- range .Values.web.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            {{- if and .pathType (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
+            pathType: {{ .pathType }}
+            {{- end }}
+            backend:
+            {{- if .backend.service }}
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+              service:
+                name: {{ default (print (include "biploma.fullname" $) "-web") .backend.service.name }}
+                port:
+                  number: {{ default $.Values.web.service.port .backend.service.port }}
+              {{- else }}
+              serviceName: {{ .backend.service.name }}
+              servicePort: {{ .backend.service.port }}
+              {{- end }}
+            {{- end }}
+            {{- with .backend.resource }}
+              {{ toYaml . | nindent 14 }}
+            {{- end }}
+          {{- end }}
+    {{- end }}
     {{- end }}
 {{- end }}

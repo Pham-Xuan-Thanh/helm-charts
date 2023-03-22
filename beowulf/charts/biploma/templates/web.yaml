@@ -1,0 +1,128 @@
+{{- if .Values.web.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "biploma.fullname" . }}-web
+  labels:
+    app: {{ include "biploma.fullname" . }}-web
+    chart: {{ include "biploma.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    {{ with .Values.web.annotations  -}}
+  annotations:
+    {{ toYaml . | nindent 4 }} 
+  {{- end  }}
+spec:
+  replicas: {{ .Values.web.replicaCount }}
+  minReadySeconds: 5
+  strategy:
+    # indicate which strategy we want for rolling update
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: {{ include "biploma.fullname" . }}
+      name: {{ include "biploma.fullname" . }}-web
+      release: {{ .Release.Name }}
+  template:
+    metadata: 
+      labels:
+        app: {{ include "biploma.fullname" . }}
+        name: {{ include "biploma.fullname" . }}-web
+        release: {{ .Release.Name }}
+      {{ with .Values.web.podAnnotations  -}}
+      annotations:
+      {{ toYaml . | nindent 8 }} 
+    {{- end  }}
+    
+    spec:
+{{- if .Values.web.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.web.nodeSelector | indent 8 }}
+{{- end }}
+{{- if .Values.web.tolerations }}
+      tolerations:
+{{ toYaml .Values.web.tolerations | indent 8 }}
+{{- end }}
+{{- if .Values.web.affinity }}
+      affinity:
+{{ toYaml .Values.web.affinity | indent 8 }}
+{{- end }}
+{{- if .Values.web.securityContext }}
+      securityContext:
+      {{- toYaml .Values.web.securityContext | nindent 10 }}
+{{- end }}
+      {{- with .Values.web.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range $secret :=  .  }}
+        - name: {{ $secret }}
+        {{- end }}
+      {{- end }} 
+      containers:
+      - image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+        imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+        
+        name: {{ include "biploma.fullname" . }}-web
+        securityContext:
+          runAsNonRoot: false
+          allowPrivilegeEscalation: true
+          privileged: true
+          readOnlyRootFilesystem: true
+          capabilities:
+            add:
+              - NET_BIND_SERVICE
+            drop:
+              - all
+        env:
+          {{- if .Values.web.extraEnvs }}
+          {{- toYaml .Values.web.extraEnvs | nindent 10 }}
+          {{- end }}
+        {{ if .Values.web.extraEnvVarsSecret }}
+        envFrom:
+          {{ toYaml .Values.web.extraEnvVarsSecret | nindent 10}}
+        {{ end }}
+        resources:
+{{ toYaml .Values.web.resources | indent 12 }}
+        ports:
+        - containerPort: {{ .Values.web.containerPort }}
+          name: web
+        {{- if .Values.web.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            scheme: "HTTP"
+            path: /
+            port: {{ .Values.web.containerPort }}
+          initialDelaySeconds: {{ .Values.web.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.web.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.web.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.web.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.web.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.web.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            scheme: "HTTP"
+            path: /
+            port: {{ .Values.web.containerPort }}
+          initialDelaySeconds: {{ .Values.web.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.web.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.web.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.web.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.web.readinessProbe.failureThreshold }}
+        {{- end }}
+        
+      
+        volumeMounts:
+        - mountPath: /var/run
+          name: tmpfs-1
+        - mountPath: /var/cache/nginx
+          name: tmpfs-2
+      volumes:
+        - name: tmpfs-1
+          emptyDir: {}
+        - name: tmpfs-2
+          emptyDir: {}
+
+{{- end }}

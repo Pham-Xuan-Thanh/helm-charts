@@ -1,0 +1,38 @@
+{{- if .Values.web.enabled  }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ print (include "biploma.fullname" .) "-web"  }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: mongo
+    {{- include "biploma.labels" . | nindent 4 }}
+  {{- with .Values.web.service.annotations }}
+  annotations:
+    {{ toYaml . | nindent 4  }}
+  {{- end }}
+spec:
+  type: {{ .Values.web.service.type  }}
+  {{- if and ( eq .Values.web.service.type "ClusterIP" ) .Values.web.service.clusterIP }}
+  clusterIP: {{ .Values.web.service.clusterIP }}
+  {{- end }}
+  {{- if and ( eq .Values.web.service.type "LoadBalancer" ) .Values.web.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.web.service.loadBalancerIP }}
+  {{- end }}
+  {{- if  .Values.web.service.externalIPs }}
+  externalIPs: {{ toYaml .Values.web.service.externalIPs | nindent 4 }}
+  {{- end }}
+  ports:
+  - name: {{ .Values.web.service.portName }}
+    port: {{ .Values.web.service.port }}
+    targetPort: web
+    {{- if and ( or ( eq .Values.web.service.type "LoadBalancer" ) ( eq .Values.web.service.type "NodePort" )) .Values.web.service.nodePort }}
+    nodePort: {{ .Values.web.service.nodePort  }}
+    {{- else if eq .Values.web.service.type "ClusterIP" }}
+    nodePort: null
+    {{- end }}
+  selector:
+    app: {{ include "biploma.fullname" . }}
+    name: {{ include "biploma.fullname" . }}-web
+
+{{- end }}
