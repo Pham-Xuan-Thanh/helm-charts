@@ -1,0 +1,224 @@
+{{- if .Values.mongodb.enabled }}
+  Mongo DB: 
+  {{- with .Values.mongodb.serviceAccount}} 
+    Service Acccount: 
+      type: serviceAccount
+      name: {{ . }}
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- with .Values.mongodb.imagePullSecrets }}
+    Secret for image pulling:
+    {{- range . }}
+      - {{ . }}
+    {{- end}}
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if .Values.mongodb.tls.enabled }} 
+    TLS certificate secret:
+      type: Secret
+      name: {{ template "biploma.fullname" . }}-ca with properties:
+      properties:
+        - tls.key
+        - tls.crt
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if .Values.mongodb.auth.enabled }}
+    Key file for replicaset auth: 
+      type: Secret
+      name: {{ default "mongo-secret" .Values.mongodb.auth.keySecret  }} 
+      properties:
+        - key.txt
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if .Values.mongodb.init.auth.enabled }}
+    Init db username and password:
+      type: Secret
+      name: {{ .Values.mongodb.init.auth.secretName }}
+      properties:
+        - mongo-initdb-root-username
+        - mongo-initdb-root-password
+  {{- end }}
+    Mongodb configuration file:
+      type: ConfigMap
+      name: {{ template "biploma.fullname" . }}-ca
+      properties:
+        - mongod.conf
+    ______________________________________________________________________________________________________________
+  {{- if .Values.mongodb.extraVolumes }}
+    Custom extra Volumes: 
+    {{- tpl (toYaml .Values.mongodb.extraVolumes) . | nindent 6 }}
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if .Values.mongodb.persistentVolume.enabled  }}
+    {{- if .Values.mongodb.persistentVolume.existingClaim }}
+    Persistent Volume Claim for data dir:
+      type: PersistentVolumeClaim
+      name: {{ .Values.mongodb.persistentVolume.existingClaim }}
+    {{- else }}
+    Storage Class for data dir:
+      type: StorageClass
+      {{ omit .Values.mongodb.persistentVolume "enabled" "existingClaim" }}
+    {{- end }}
+    ______________________________________________________________________________________________________________
+  {{- end }}
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+{{- end }}  
+{{- if .Values.redis.enabled }} 
+  Redis:
+  {{- with .Values.mongodb.imagePullSecrets }}
+    Secret for image pulling:
+    {{- range . }}
+      - {{ . }}
+    {{- end}}
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- with .Values.redis.serviceAccountName }}
+    Service Account for container: 
+      type: Service Account
+      name: {{ toYaml . | quote }}
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if .Values.redis.auth.enabled }}
+    Redis password:
+      type: Secret
+      name: {{ default ( print (include "biploma.fullname" . ) "-redis") .Values.redis.auth.existingSecret  }}
+      properties:
+        - {{ default "redis_password" .Values.redis.auth.existingSecretPasswordKey }}
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if .Values.redis.extraEnvVarsCM }}
+    Custom extra environment from Configmap:
+      type: ConfigMap
+      name: {{ .Values.redis.extraEnvVarsCM }}
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if .Values.redis.extraEnvVarsSecret }}
+    Custom extra environment from Secret:
+      type: Secret 
+      name: {{ .Values.redis.extraEnvVarsSecret }}
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if .Values.redis.config.configMapName }} 
+    Redis Configuration file:
+      type: ConfigMap
+      name: {{ .Values.redis.config.configMapName }}
+      properties:
+        - redis.conf
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if .Values.redis.tls.enabled }}
+    TLS certificate redis files:
+      type: Secret
+      name: {{ default (printf "%s-redis-crt" (include "biploma.fullname" . )) .Values.redis.tls.existingSecret  }}
+      properties:
+        - tls.crt
+        - tls.key
+        - ca.crt
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if  .Values.redis.persistence.enabled }}
+    {{- if .Values.redis.persistence.existingClaim }}
+    Persistence claim for redis data dir:
+      type: PersistentVolumeClaim
+      name: {{ .Values.redis.persistence.existingClaim }}
+    {{- else if not .Values.redis.persistence.hostPath }}
+    Storage Class for data dir:
+      type: StorageClass
+      {{ omit .Values.redis.persistence "enabled" "existingClaim" "hostPath" "subPath" "subpathExpr" }}
+    {{- end }}
+    ______________________________________________________________________________________________________________
+  {{- end }}
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+{{- end }}
+{{- if .Values.api.enabled }}
+  API: 
+  {{- with .Values.api.imagePullSecrets }}
+    Secret for image pulling:
+    {{- range . }}
+      - {{ . }}
+    {{- end}}
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if .Values.api.persistent.enabled }}
+  {{- if .Values.api.persistent.configmap }}
+    Configuration file for API service:
+      type: ConfigMap
+      name: {{ .Values.api.persistent.configmap }}
+      properties:
+        - certificate.properties
+    ______________________________________________________________________________________________________________
+  {{- else if .Values.api.persistent.secret }}
+    Configuration file for API service:
+      type: Secret
+      name: {{ .Values.api.persistent.secret }}
+      properties:
+        - certificate.properties
+    ______________________________________________________________________________________________________________
+  {{- else }}
+    Configuration Directory for API service:
+      type: PersistentVolumeClaim
+      name: {{ if .Values.api.persistent.existingClaim }}{{ .Values.api.persistent.existingClaim }}{{- else }}{{ include "biploma.fullname" . }}{{- end }}
+      file: certificate.properties
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- end }}
+  {{- if .Values.api.ingress.tls }}
+    TLS certificates for API ingress:
+    * Notice: If You used to "Let's encrypt" in annotations. Ignore this.
+      {{- range .Values.api.ingress.tls }}
+      type: Secret
+      name: {{ .secretName }}
+      properties:
+        - tls.crt
+        - tls.key
+      {{ end }}
+    ______________________________________________________________________________________________________________
+  {{- end }}
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+{{- end }}
+{{- if .Values.admin.enabled }}
+  ADMIN: 
+  {{- with .Values.api.imagePullSecrets }}
+    Secret for image pulling:
+    {{- range . }}
+      - {{ . }}
+    {{- end}}
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if .Values.admin.ingress.tls }}
+    TLS certificates for ADMIN-page ingress:
+    * Notice: If You used to "Let's encrypt" in annotations. Ignore this.
+      {{- range .Values.admin.ingress.tls }}
+      type: Secret
+      name: {{ .secretName }}
+      properties:
+        - tls.crt
+        - tls.key
+      {{ end }}
+    ______________________________________________________________________________________________________________
+  {{- end }}
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+{{- end }}
+{{- if .Values.web.enabled }}
+  WEB: 
+  {{- with .Values.api.imagePullSecrets }}
+    Secret for image pulling:
+    {{- range . }}
+      - {{ . }}
+    {{- end}}
+    ______________________________________________________________________________________________________________
+  {{- end }}
+  {{- if .Values.web.ingress.tls }}
+    TLS certificates for WEB-page ingress:
+    * Notice: If You used to "Let's encrypt" in annotations. Ignore this.
+      {{- range .Values.web.ingress.tls }}
+      type: Secret
+      name: {{ .secretName }}
+      properties:
+        - tls.crt
+        - tls.key
+      {{ end }}
+    ______________________________________________________________________________________________________________
+  {{- end }}
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+{{- end }}

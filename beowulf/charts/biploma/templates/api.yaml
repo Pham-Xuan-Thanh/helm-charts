@@ -95,9 +95,8 @@ spec:
       volumes:
       - name: config
       {{- if .Values.api.persistent.enabled }}
-        persistentVolumeClaim:
-          claimName: {{ if .Values.api.persistent.existingClaim }}{{ .Values.api.persistent.existingClaim }}{{- else }}{{ include "biploma.fullname" . }}{{- end }}
-      {{- else if .Values.api.persistent.configmap }}
+        
+      {{- if .Values.api.persistent.configmap }}
         configMap:
           name: {{ .Values.api.persistent.configmap }}
           items:
@@ -109,6 +108,10 @@ spec:
           items:
           - key: certificate.properties
             path: certificate.properties 
+      {{- else }}
+        persistentVolumeClaim:
+          claimName: {{ if .Values.api.persistent.existingClaim }}{{ .Values.api.persistent.existingClaim }}{{- else }}{{ include "biploma.fullname" . }}{{- end }}
+      {{- end }}
       {{- else }}
         emptyDir: {}
       {{- end }}

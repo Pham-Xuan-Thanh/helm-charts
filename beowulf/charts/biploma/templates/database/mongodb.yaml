@@ -250,6 +250,11 @@ spec:
 {{- tpl (toYaml .Values.mongodb.extraVolumes) . | nindent 8 }}
 {{- end }}
 {{- if .Values.mongodb.persistentVolume.enabled }}
+  {{- if .Values.mongodb.persistentVolume.existingClaim }}
+        - name: datadir
+          persistentVolumeClaim:
+          claimName: {{ .Values.mongodb.persistentVolume.existingClaim }}
+  {{- else -}}
   volumeClaimTemplates:
     - metadata:
         name: datadir
@@ -272,6 +277,7 @@ spec:
         storageClassName: "{{ .Values.mongodb.persistentVolume.storageClass }}"
       {{- end }}
       {{- end }}
+  {{- end }}
 {{- else if .Values.mongodb.hostPath }}
         - name: datadir
           hostPath: 

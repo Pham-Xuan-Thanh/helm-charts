@@ -9,7 +9,7 @@ mongodb:
   enabled: false
   useStatefulSet: false
 
-
+  imagePullSecrets:
   # pod security context, restrict user, fs owned
   podSecurityContext:
     enabled: false
@@ -121,6 +121,8 @@ mongodb:
     size:
     # provision for pvc
     storageClass:
+    existingClaim:
+
   service:
     type: ClusterIP   # ClusterIP, LoadBalancer, NodePort
     portName: mongodb
@@ -348,11 +350,13 @@ api:
               #   kind: StorageBucket
               #   name:
     tls: []
-
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
   extraVolumeMounts:
 
   persistent:
-    enabled: false
+    enabled: true
     # persistenVolume Claim declared
     existingClaim:
     # configmap for configuration  file

@@ -249,7 +249,7 @@ spec:
         {{- if .Values.redis.tls.enabled }}
         - name: redis-certificates
           secret:
-            secretName: {{ default (printf "%s-crt" (include "biploma.fullname" . )) .Values.redis.tls.existingSecret  }}
+            secretName: {{ default (printf "%s-redis-crt" (include "biploma.fullname" . )) .Values.redis.tls.existingSecret  }}
             defaultMode: 256
         {{- end }}
   {{- if .Values.redis.persistence.enabled }}
