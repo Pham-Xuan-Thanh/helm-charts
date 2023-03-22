@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: {{ ternary "StatefulSet" "Deployment" .Values.redis.useStatefulSet | quote }}
 metadata:
-  name: {{ print  (include "tutorica.name" . ) "-redis" }}
+  name: {{ print  (include "tutorica.fullname" . ) "-redis" }}
   namespace: {{ .Release.Namespace | quote }}
   labels: {{- include "tutorica.labels" . | nindent 4 }}
     app.kubernetes.io/component: redis

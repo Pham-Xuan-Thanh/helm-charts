@@ -176,7 +176,7 @@ mongodb:
     initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 1
-    failureThreshold: 3
+    failureThreshold: 30
     successThreshold: 1
   readinessProbe:
     enabled: true
@@ -187,10 +187,10 @@ mongodb:
     successThreshold: 1
   # init container copy files to volume
   copyConfigImage:
-    repository: mysql
+    repository: mongo
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: ""
+    tag: "4.4"
   
   # tls
   tls:
@@ -328,6 +328,7 @@ redis:
   # authenctication 
   auth:
     enabled: false
+    existingSecret: 
     existingSecretPasswordKey:
   # configurations
   config:
@@ -386,7 +387,16 @@ redis:
     failureThreshold: 22
   
   resources:
+  service:
+    type: ClusterIP   # ClusterIP, LoadBalancer, NodePort
+    portName: redis
+    port: 6379
+    clusterIP: 
+    loadBalancerIP:
+    externalIPs:
+    nodePort:
 
+    annotations: 
 
 
 
@@ -438,7 +448,7 @@ api:
       cpu: "150m"
     limits: 
       memory: "400Mi"
-      cpu: "3500m"
+      cpu: "350m"
     # limits: 
     #   cpu: 
     #   memory: 

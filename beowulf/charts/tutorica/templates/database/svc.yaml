@@ -81,3 +81,44 @@ spec:
       {{  toYaml . | nindent 4 }}
       {{ end }}  
 {{- end }}
+---
+{{- if .Values.redis.enabled  }}
+{{- $service:= .Values.redis.service -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ print (include "tutorica.fullname" .) "-redis"  }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: redis
+    {{- include "tutorica.labels" . | nindent 4 }}
+  {{- with .Values.mysql.service.annotations }}
+  annotations:
+    {{ toYaml . | nindent 4  }}
+  {{- end }}
+spec:
+  type: {{ .Values.redis.service.type  }}
+  {{- if and ( eq .Values.redis.service.type "ClusterIP" ) .Values.redis.service.clusterIP }}
+  clusterIP: {{ .Values.redis.service.clusterIP }}
+  {{- end }}
+  {{- if and ( eq .Values.redis.service.type "LoadBalancer" ) .Values.redis.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.redis.service.loadBalancerIP }}
+  {{- end }}
+  {{- if  .Values.redis.service.externalIPs }}
+  externalIPs: {{ toYaml .Values.redis.service.externalIPs | nindent 4 }}
+  {{- end }}
+  ports:
+  - name: {{ .Values.redis.service.portName }}
+    port: {{ .Values.redis.service.port }}
+    targetPort: redis
+    {{- if and ( or ( eq .Values.redis.service.type "LoadBalancer" ) ( eq .Values.redis.service.type "NodePort" )) .Values.redis.service.nodePort }}
+    nodePort: {{ .Values.redis.service.nodePort  }}
+    {{- else if eq .Values.redis.service.type "ClusterIP" }}
+    nodePort: null
+    {{- end }}
+  selector:
+    app.kubernetes.io/component: redis
+    {{ with .Values.redis.podLabels -}}
+      {{ toYaml . | nindent 6 }}
+    {{- end }} 
+{{- end }}
