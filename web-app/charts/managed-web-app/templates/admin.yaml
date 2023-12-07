@@ -1,0 +1,154 @@
+{{ if .Values.admin.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ print  (include "managed-web-app.fullname" .) "-admin" }}
+  labels:
+    app.kubernetes.io/name: {{ include "managed-web-app.name" . }}
+    helm.sh/chart: {{ include "managed-web-app.chart" . }}
+    {{ include "managed-web-app.labels" . | nindent 4 }}
+  {{ with .Values.admin.annotations  -}}
+  annotations:
+    {{ toYaml . | nindent 4 }} 
+  {{- end  }}
+spec:
+  replicas: {{ default 1 .Values.admin.replica }}
+  selector:
+    matchLabels:
+      name: {{ print  (include "managed-web-app.fullname" .) "-admin" }}
+      {{  include "managed-web-app.selectorLabels" . | nindent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: {{ print  (include "managed-web-app.fullname" .) "-admin" }}
+        {{  include "managed-web-app.selectorLabels" . | nindent 8 }}
+
+        {{- if .Values.admin.podLabels }}
+        {{ toYaml .Values.admin.podLabels | indent 8 }}
+        {{- end }}
+
+        {{- if .Values.admin.podAnnotations }}
+      annotations:
+        {{ toYaml .Values.admin.podAnnotations | indent 8 }}
+        {{- end }}
+    spec:
+    {{- with .Values.admin.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range $secret :=  .  }}
+        - name: {{ $secret }}
+        {{- end }}
+    {{- end }}
+      {{- if and .Values.admin.securityContext .Values.admin.securityContext.enabled }}
+      securityContext:
+        fsGroup: {{ .Values.admin.securityContext.fsGroup }}
+        runAsUser: {{ .Values.admin.securityContext.runAsUser }}
+      {{- end }}
+      containers:
+      - name: {{ print  (include "managed-web-app.fullname" .) "-admin" }}
+        image: "{{ .Values.admin.image.repository }}:{{ .Values.admin.image.tag | default "latest" }}"
+        imagePullPolicy: {{ .Values.admin.image.pullPolicy }}
+        env:
+        - name: DEPLOY_PLATFORM
+          value: helm-chart
+{{- with .Values.admin.extraEnv }}
+	{{- toYaml . | nindent 8 }}
+{{- end }}
+        ports:
+        - name: admin
+          containerPort: 1106
+        {{- if .Values.admin.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /api/up
+            port: admin
+          initialDelaySeconds: {{ .Values.admin.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.admin.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.admin.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.admin.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.admin.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.admin.startupProbe.enabled }}
+        startupProbe:
+            tcpSocket:
+              port: admin 
+            initialDelaySeconds: {{ .Values.mongodb.startupProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.mongodb.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.mongodb.startupProbe.failureThreshold }}
+            periodSeconds: {{ .Values.mongodb.startupProbe.periodSeconds }}
+            successThreshold: {{ .Values.mongodb.startupProbe.successThreshold }}
+        {{- end }}  
+        {{- if .Values.admin.readinessProbe.enabled }}
+        readinessProbe:
+          # httpGet:
+          #   path: /api/up
+          #   port: admin
+          tcpSocket:
+              port: admin 
+          initialDelaySeconds: {{ .Values.admin.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.admin.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.admin.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.admin.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.admin.readinessProbe.failureThreshold }}
+        {{- end }}
+        resources:
+{{ toYaml .Values.admin.resources | indent 10 }}
+        volumeMounts:
+        - name: config
+          mountPath: /opt/work/managed-web-app/conf/managed-web-app.properties
+          subPath: managed-web-app.properties
+        {{- with .Values.admin.extraVolumeMounts }}
+          {{ toYaml . | nindent 8  }}
+        {{- end }}          
+      volumes:
+      - name: config
+      {{- if .Values.admin.persistent.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ if .Values.persistent.existingClaim }}{{ .Values.persistent.existingClaim }}{{- else }}{{ include "managed-web-app.fullname" . }}{{- end }}
+      {{- else if .Values.admin.persistent.configmap }}
+        configMap:
+          name: {{ .Values.admin.persistent.configmap }}
+          items:
+            - key: managed-web-app.properties
+              path: managed-web-app.properties
+      {{- else if .Values.admin.persistent.secret }}
+        secret:
+          secretName: {{ .Values.admin.persistent.secret }}
+          items:
+          - key: managed-web-app.properties
+            path: managed-web-app.properties 
+      {{- else }}
+        emptyDir: {}
+      {{- end }}
+      {{- if .Values.admin.extraVolumes }}
+        {{ toYaml .Values.admin.extraVolumes | nindent 6 }}
+      {{- end }}
+{{- if or .Values.admin.podAntiAffinity .Values.admin.affinity }}
+      affinity:
+{{- if .Values.admin.affinity }}
+{{ toYaml .Values.admin.affinity | indent 8 }}
+{{- end }}
+{{- if eq .Values.admin.podAntiAffinity "hard" }}
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: {{ .Values.admin.podAntiAffinityTopologyKey }}
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: {{ include "managed-web-app.name" . }}
+{{- else if eq .Values.admin.podAntiAffinity "soft" }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: {{ .Values.admin.podAntiAffinityTopologyKey }}
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: {{ include "managed-web-app.name" . }}
+                  app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,75 @@
+{{ if .Values.api.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ print (include "managed-web-app.fullname" .) "-api"  }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: loadbalancer
+    {{- include "managed-web-app.labels" . | nindent 4 }}
+  {{- with .Values.api.service.annotations }}
+  annotations:
+    {{ toYaml . | nindent 4  }}
+  {{- end }}
+spec:
+  type: {{ .Values.api.service.type  }}
+  {{- if and ( eq .Values.api.service.type "ClusterIP" ) .Values.api.service.clusterIP }}
+  clusterIP: {{ .Values.api.service.clusterIP }}
+  {{- end }}
+  {{- if and ( eq .Values.api.service.type "LoadBalancer" ) .Values.api.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.api.service.loadBalancerIP }}
+  {{- end }}
+  {{- if  .Values.api.service.externalIPs }}
+  externalIPs: {{ toYaml .Values.api.service.externalIPs | nindent 4 }}
+  {{- end }}
+  ports:
+  - name: {{ .Values.api.service.portName }}
+    port: {{ .Values.api.service.port }}
+    targetPort: api
+    {{- if and ( or ( eq .Values.api.service.type "LoadBalancer" ) ( eq .Values.api.service.type "NodePort" )) .Values.api.service.nodePort }}
+    nodePort: {{ .Values.api.service.nodePort  }}
+    {{- else if eq .Values.api.service.type "ClusterIP" }}
+    nodePort: null
+    {{- end }}
+  selector:
+    name: {{ print  (include "managed-web-app.fullname" .) "-api" }}
+      {{  include "managed-web-app.selectorLabels" . | nindent 4 }}
+{{ end }}
+---
+{{ if .Values.admin.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ print (include "managed-web-app.fullname" .) "-admin"  }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: loadbalancer
+    {{- include "managed-web-app.labels" . | nindent 4 }}
+  {{- with .Values.admin.service.annotations }}
+  annotations:
+    {{ toYaml . | nindent 4  }}
+  {{- end }}
+spec:
+  type: {{ .Values.admin.service.type  }}
+  {{- if and ( eq .Values.admin.service.type "ClusterIP" ) .Values.admin.service.clusterIP }}
+  clusterIP: {{ .Values.admin.service.clusterIP }}
+  {{- end }}
+  {{- if and ( eq .Values.admin.service.type "LoadBalancer" ) .Values.admin.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.admin.service.loadBalancerIP }}
+  {{- end }}
+  {{- if  .Values.admin.service.externalIPs }}
+  externalIPs: {{ toYaml .Values.admin.service.externalIPs | nindent 4 }}
+  {{- end }}
+  ports:
+  - name: {{ .Values.admin.service.portName }}
+    port: {{ .Values.admin.service.port }}
+    targetPort: admin
+    {{- if and ( or ( eq .Values.admin.service.type "LoadBalancer" ) ( eq .Values.admin.service.type "NodePort" )) .Values.admin.service.nodePort }}
+    nodePort: {{ .Values.admin.service.nodePort  }}
+    {{- else if eq .Values.admin.service.type "ClusterIP" }}
+    nodePort: null
+    {{- end }}
+  selector:
+    name: {{ print  (include "managed-web-app.fullname" .) "-admin" }}
+      {{  include "managed-web-app.selectorLabels" . | nindent 4 }}
+{{ end }}

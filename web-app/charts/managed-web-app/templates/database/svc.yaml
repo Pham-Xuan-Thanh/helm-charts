@@ -1,0 +1,124 @@
+{{- if .Values.mongodb.enabled  }}
+{{- $service:= .Values.mongodb.service -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ print (include "managed-web-app.fullname" .) "-mongodb"  }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: mongo
+    {{- include "managed-web-app.labels" . | nindent 4 }}
+  {{- with .Values.mongodb.service.annotations }}
+  annotations:
+    {{ toYaml . | nindent 4  }}
+  {{- end }}
+spec:
+  type: {{ .Values.mongodb.service.type  }}
+  {{- if and ( eq .Values.mongodb.service.type "ClusterIP" ) .Values.mongodb.service.clusterIP }}
+  clusterIP: {{ .Values.mongodb.service.clusterIP }}
+  {{- end }}
+  {{- if and ( eq .Values.mongodb.service.type "LoadBalancer" ) .Values.mongodb.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.mongodb.service.loadBalancerIP }}
+  {{- end }}
+  {{- if  .Values.mongodb.service.externalIPs }}
+  externalIPs: {{ toYaml .Values.mongodb.service.externalIPs | nindent 4 }}
+  {{- end }}
+  ports:
+  - name: {{ .Values.mongodb.service.portName }}
+    port: {{ .Values.mongodb.service.port }}
+    targetPort: mongodb
+    {{- if and ( or ( eq .Values.mongodb.service.type "LoadBalancer" ) ( eq .Values.mongodb.service.type "NodePort" )) .Values.mongodb.service.nodePort }}
+    nodePort: {{ .Values.mongodb.service.nodePort  }}
+    {{- else if eq .Values.mongodb.service.type "ClusterIP" }}
+    nodePort: null
+    {{- end }}
+  selector:
+    app.kubernetes.io/component: mongo
+      {{ include "managed-web-app.labels" . | nindent 4 }}
+      {{ with .Values.mongodb.popdLabels}}
+      {{  toYaml . | nindent 4 }}
+      {{ end }}  
+{{- end }}
+---
+{{- if .Values.mysql.enabled  }}
+{{- $service:= .Values.mysql.service -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ print (include "managed-web-app.fullname" .) "-mysql"  }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: mysql
+    {{- include "managed-web-app.labels" . | nindent 4 }}
+  {{- with .Values.mysql.service.annotations }}
+  annotations:
+    {{ toYaml . | nindent 4  }}
+  {{- end }}
+spec:
+  type: {{ .Values.mysql.service.type  }}
+  {{- if and ( eq .Values.mysql.service.type "ClusterIP" ) .Values.mysql.service.clusterIP }}
+  clusterIP: {{ .Values.mysql.service.clusterIP }}
+  {{- end }}
+  {{- if and ( eq .Values.mysql.service.type "LoadBalancer" ) .Values.mysql.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.mysql.service.loadBalancerIP }}
+  {{- end }}
+  {{- if  .Values.mysql.service.externalIPs }}
+  externalIPs: {{ toYaml .Values.mysql.service.externalIPs | nindent 4 }}
+  {{- end }}
+  ports:
+  - name: {{ .Values.mysql.service.portName }}
+    port: {{ .Values.mysql.service.port }}
+    targetPort: mysql
+    {{- if and ( or ( eq .Values.mysql.service.type "LoadBalancer" ) ( eq .Values.mysql.service.type "NodePort" )) .Values.mysql.service.nodePort }}
+    nodePort: {{ .Values.mysql.service.nodePort  }}
+    {{- else if eq .Values.mysql.service.type "ClusterIP" }}
+    nodePort: null
+    {{- end }}
+  selector:
+    app.kubernetes.io/component: mysql
+      {{ include "managed-web-app.labels" . | nindent 4 }}
+      {{ with .Values.mysql.podLabels}}
+      {{  toYaml . | nindent 4 }}
+      {{ end }}  
+{{- end }}
+---
+{{- if .Values.redis.enabled  }}
+{{- $service:= .Values.redis.service -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ print (include "managed-web-app.fullname" .) "-redis"  }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: redis
+    {{- include "managed-web-app.labels" . | nindent 4 }}
+  {{- with .Values.mysql.service.annotations }}
+  annotations:
+    {{ toYaml . | nindent 4  }}
+  {{- end }}
+spec:
+  type: {{ .Values.redis.service.type  }}
+  {{- if and ( eq .Values.redis.service.type "ClusterIP" ) .Values.redis.service.clusterIP }}
+  clusterIP: {{ .Values.redis.service.clusterIP }}
+  {{- end }}
+  {{- if and ( eq .Values.redis.service.type "LoadBalancer" ) .Values.redis.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.redis.service.loadBalancerIP }}
+  {{- end }}
+  {{- if  .Values.redis.service.externalIPs }}
+  externalIPs: {{ toYaml .Values.redis.service.externalIPs | nindent 4 }}
+  {{- end }}
+  ports:
+  - name: {{ .Values.redis.service.portName }}
+    port: {{ .Values.redis.service.port }}
+    targetPort: redis
+    {{- if and ( or ( eq .Values.redis.service.type "LoadBalancer" ) ( eq .Values.redis.service.type "NodePort" )) .Values.redis.service.nodePort }}
+    nodePort: {{ .Values.redis.service.nodePort  }}
+    {{- else if eq .Values.redis.service.type "ClusterIP" }}
+    nodePort: null
+    {{- end }}
+  selector:
+    app.kubernetes.io/component: redis
+    {{ with .Values.redis.podLabels -}}
+      {{ toYaml . | nindent 6 }}
+    {{- end }} 
+{{- end }}

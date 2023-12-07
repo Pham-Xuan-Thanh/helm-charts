@@ -1,0 +1,59 @@
+{{- if   .Values.mysql.enabled }}
+    Mysql server is running as http://{{ print ( include "managed-web-app.fullname" .) "-mysql" }}:{{ .Values.mysql.service.port }} with portName: {{ .Values.mysql.service.portName }}
+{{- end }}
+{{- if .Values.mongodb.enabled }}
+    MongoDB server is running as http://{{ print ( include "managed-web-app.fullname" .) "-mongodb" }}:{{ .Values.mongodb.service.port }} with portName: {{ .Values.mongodb.service.portName }}
+{{- end }}
+1. Some key, secrets REQUIRED: 
+  {{- if .Values.mysql.enabled }}
+  {{ if .Values.mysql.auth.existingSecret }}
+  echo "Create secret with following property: "
+    name: {{ .Values.mysql.auth.existingSecret }}
+  echo "   mysql-password: password for {{ .Values.mysql.auth.username }}  "
+  echo "   mysql-root-password: password for root user"
+  {{ end }}
+  {{ end }}
+  {{- with .Values.mongodb.auth.enabled }}
+  echo "For mongodb supply following secrets:   "
+  echo "   {{ template "managed-web-app.fullname" . }}-mongodb : ConfiMap; configuration file for mongodb"
+  ehco "   {{ template "managed-web-app.fullname" . }}-ca : Secret: (if tls enable, its required) tls certificate (tls.cert, tls.key)"
+  {{- end }}
+  {{- if .Values.mongodb.auth.enabled }}
+  echo "   Secret key {{ .Values.mongodb.auth.keySecret }} is required. for mongo key to auth in Replication "  
+  {{- end }}
+  {{- if .Values.api.enabled }}
+    API: provide following secrets, configmaps:
+      1. managed-web-app.properties configuration for managed-web-app:
+    {{-  if .Values.api.persistent.configmap }}
+        ConfigMap: 
+         - name: {{ .Values.api.persistent.configmap}}
+         - properties: managed-web-app.properties (configuration for app )
+    {{- else if .Values.api.persistent.secret }}
+        Secret: 
+        - name: {{ .Values.api.persistent.secret }}
+        - properties: managed-web-app.properties ( configuration for app )
+    {{- end }}
+  {{- end }}
+  {{- if .Values.redis.enabled }}
+    {{- if .Values.redis.auth.enabled }}
+      Redis keys: 
+        {{- if .Values.redis.auth.existingSecretPasswordKey }}  
+        - Secret for redis password : {{ template "managed-web-app.secretName" . }} 
+        {{- end }}
+        Require needed following configmaps:
+          {{- if .Values.redis.config.configMapName }}
+          - {{ include "managed-web-app.redis.configmapName" . }}
+          {{- end }}
+          {{- range .Values.redis.extraEnvVarsCM }}
+          - {{ . }}
+          {{- end }}
+        Require needed following secrets: 
+          {{- if .Values.redis.tls.enabled }}
+          - {{ include "managed-web-app.tlsSecretName" .Values.redis.tls }}
+          {{- end }}
+          {{- range .Values.redis.extraEnvVarsSecret }}
+          - {{ . }}
+          {{- end }}
+
+    {{- end }}
+  {{- end }}

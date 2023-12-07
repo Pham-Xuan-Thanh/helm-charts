@@ -1,0 +1,200 @@
+# Default values for managed-web-app.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  # volume provisioner
+  storageClass: 
+
+replicaCount: 1
+
+mysql:
+  enabled: true
+  # Is use statefulset for deploy 
+  useStatefulSet: false
+  # list of secrets for pullling image from container registry
+  imagePullSecrets: {}
+  # container cmd run
+  command:
+  # command arguments 
+  args: 
+    # - 
+    # -
+    # -
+
+  # authorization
+  auth: 
+    existingSecret: mysql-secret
+    username: managed-web-app
+    database: managed-web-app
+  extraEnvVars: 
+  extraEnvVarsCM: 
+  extraEnvVarsSecret: 
+
+
+  podSecurityContext: 
+    enabled: false
+    fsGroup: 1001
+    
+    # enabled: true
+    # fsGroup: 1001
+  tolerations: 
+  affinity: 
+  nodeSelector: 
+  podLabels: 
+  podAnnotations: 
+  # healthcheck
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+  # custom healthcheck
+  customLivenessProbe:
+  customReadinessProbe:
+  # resources limits and request
+  resources:
+    requests:
+      memory: "100Mi"
+      cpu: "80m"
+    limits: 
+      memory: "180Mi"
+      cpu: "120m"
+  # hostpath store local node. Store mysql dbs
+  hostPath: /opt/wor/app/managed-web-app-testing/msyql/   # path to store 
+  # initdb script for mysql 
+  initdbScriptsConfigMap:
+  # configuration file 
+  existingConfigmap:
+  # extra volume mounts
+  extraVolumeMounts:
+  # extra volumes
+  extraVolumes:
+  # Persitence Volume Claims (PVC)
+  persistence: 
+    
+    ## If true, use a Persistent Volume Claim, If false, use emptyDir
+    ##
+    enabled: false
+    ## Name of existing PVC to hold MySQL Primary data
+    ## NOTE: When it's set the rest of persistence parameters are ignored
+    ##
+    # existingClaim:
+    ## Persistent Volume Storage Class
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    # storageClass: "-"
+    ## Persistent Volume Claim annotations
+    ##
+    annotations: {}
+    ## Persistent Volume Access Mode
+    ##
+    accessModes:
+      - ReadWriteOnce
+    ## Persistent Volume size
+    ##
+    size: 8Gi
+    ## selector can be used to match an existing PersistentVolume
+    ## selector:
+    ##   matchLabels:
+    ##     app: my-app
+    ##
+    selector: {}
+    ##  pvc existing  name
+    existingClaim: 
+
+
+
+
+  image:
+    imagePullSecrets: []
+    repository: mysql
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "latest"
+
+
+
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

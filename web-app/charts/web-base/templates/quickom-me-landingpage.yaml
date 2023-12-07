@@ -1,0 +1,44 @@
+{{ if .Values.landingpage.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+{{- $name := print (include "web-base.fullname" .) "-landingpage" }}
+metadata:
+  name: {{ $name }}
+  namespace: {{ include "web-base.namespace" . }}
+  labels: 
+    {{- include "web-base.labels" . | nindent 4 }}
+  {{ with .Values.landingpage.annotations }}
+  annotations: 
+      {{- toYaml . | nindent 4 -}}
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "web-base.selectorLabels" . | nindent 6  }}
+  template:
+    metadata:
+      labels:
+      {{- include "web-base.selectorLabels" . | nindent 8 }}
+      {{- with .Values.landingpage.podLabels -}}
+        {{- toYaml . | nindent 8 -}}
+      {{- end -}}
+      {{ with .Values.landingpage.annotations -}}
+      annotations: 
+      {{- toYaml . | nindent 4 -}}
+      {{- end }} 
+    spec:
+      {{- with .Values.landingpage.image.imagePullSecrets }}
+      imagePullSecrets:  
+        {{- toYaml . | nindent 8 -}}
+      {{ end }}
+      containers:
+      - name: {{ $name }}
+        image: {{ include "utils.get-image" .Values.landingpage }}
+        resources:
+          {{- include "utils.get-resources" .Values.landingpage | nindent 10 }}
+        ports:
+        - containerPort: !!int {{ default 80 .Values.landingpage.targetPort }}
+          {{- with .Values.landingpage.portName -}}
+          name: {{ . }}
+          {{ end }}
+{{ end }}
