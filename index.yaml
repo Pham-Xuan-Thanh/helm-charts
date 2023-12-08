@@ -1,0 +1,25 @@
+apiVersion: v1
+entries:
+  managed-web-app:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2023-12-08T14:47:43.7112411+07:00"
+    description: THE PLATFORM FOR DISTANCE TEACHING AND TRAINING
+    digest: a1eb89cd295f5e60c0215c2bc6918e45b518559e64950010f6443e5c3f98c3bf
+    name: managed-web-app
+    type: application
+    urls:
+    - https://pham-xuan-thanh.github.io/helm-charts/charts/managed-web-app-0.1.0.tgz
+    version: 0.1.0
+  web-base:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2023-12-08T14:47:43.7118164+07:00"
+    description: A Helm chart for Kubernetes
+    digest: a8713e3de0c8cc2fa3871ef29f042bcf2f0ec5149721efd9f4128d8b6516d657
+    name: web-base
+    type: application
+    urls:
+    - https://pham-xuan-thanh.github.io/helm-charts/charts/web-base-0.1.0.tgz
+    version: 0.1.0
+generated: "2023-12-08T14:47:43.7099313+07:00"
